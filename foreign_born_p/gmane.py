@@ -15,28 +15,19 @@ cur = conn.cursor()
 
 # &limit = how many
 # &year =  the specific year of data
-baseurl = "https://zircon.datausa.io/api/data?measure=Foreign-Born%20Citizens,Population&drilldowns=Place"
+baseurl = "https://zircon.datausa.io/api/data?measure=Foreign-Born%20Citizens,Population&drilldowns=State"
 
 cur.execute(
     """CREATE TABLE IF NOT EXISTS borns
-          (id INTEGER PRIMARY KEY, id_place TEXT, place TEXT,
-          id_year INTEGER, year TEXT, citiziens INTEGER,
-          slug_place TEXT, population INTEGER)"""
+          (id INTEGER PRIMARY KEY, id_state TEXT, state TEXT,
+          id_year INTEGER, year TEXT,
+          slug_state TEXT, population INTEGER)"""
 )
 
-start = None
-cur.execute("SELECT max(id) FROM borns")
-try:
-    row = cur.fetchone()
-    if row is None:
-        start = 0
-    else:
-        start = row[0]
-except:
-    start = 0
+years = None
+cur.execute("SELECT DISTINCT id_year FROM borns")
 
-if start is None:
-    start = 0
+years = [i[0] for i in cur.fetchall()]
 
 many = 0
 count = 0
@@ -45,12 +36,22 @@ fail = 0
 while True:
     if many < 1:
         conn.commit()
-        sval = input("How many reports: ")
+        if len(years) > 0 :
+            print("years saved: ",years)
+        sval = input("Choose the Year of the report (From 2013 to 2021): ")
         if len(sval) < 1:
             break
+        while True:
+            if int(sval) < 2013 or int(sval) > 2021:
+                print("The year is out of range.")
+            elif int(sval) in years:
+                print('We already have the data from that year.')
+            else:
+                break
+            sval = input("Choose the Year of the report (From 2013 to 2021): ")
         many = int(sval)
 
-    url = baseurl + "&limit=" + str(many + start)
+    url = baseurl + "&year=" + str(many)
 
     text = None
     try:
@@ -58,6 +59,7 @@ while True:
         print("Loading...")
         response = requests.get(url)
         json = response.json()
+        years.append(sval)
 
     except KeyboardInterrupt:
         print("")
@@ -72,23 +74,21 @@ while True:
         continue
 
     # json = eval(json)
-    count += 1
     print(url, len(json))
 
     # ! [FIX] we are doing more iterations than necessary
 
     for idx, born in enumerate(json["data"]):
-        if idx < start : continue
+        count += 1
         cur.execute(
-            """INSERT OR IGNORE INTO borns (id_place, place, id_year, year,
-                     citiziens, slug_place, population) VALUES (? , ?, ?, ?, ?, ?, ?)""",
+            """INSERT OR IGNORE INTO borns (id_state, state, id_year, year,
+                slug_state, population) VALUES (? , ?, ?, ?, ?, ?)""",
             (
-                born.get('ID Place'),
-                born.get('Place'),
+                born.get('ID State'),
+                born.get('State'),
                 born.get('ID Year'),
                 born.get('Year'),
-                born.get('Foreign-Born Citizens'),
-                born.get('Slug Place'),
+                born.get('Slug State'),
                 born.get('Population'),
             ),
         )
@@ -97,7 +97,6 @@ while True:
         if count % 50 == 0 : conn.commit()
         if count % 100 == 0 : time.sleep(1)
     
-    start = start + many
     many = 0
         
 

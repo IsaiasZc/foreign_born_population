@@ -7,17 +7,16 @@ cur = conn.cursor()
 cur.execute("SELECT * FROM borns")
 
 fhand = open("gborns.js", "w")
-fhand.write("gborns = [")
+fhand.write("export  const gborns = [")
 first = True
 
 keys = [
     {"key": "id", "string": False},
-    {"key": "id_place", "string": True},
-    {"key": "place", "string": True},
+    {"key": "id_state", "string": True},
+    {"key": "state", "string": True},
     {"key": "id_year", "string": False},
     {"key": "year", "string": True},
-    {"key": "citiziens", "string": False},
-    {"key": "slug_place", "string": True},
+    {"key": "slug_state", "string": True},
     {"key": "population", "string": False},
 ]
 
@@ -42,6 +41,7 @@ for born in cur:
     fhand.write(stri)
 
 fhand.write("\n];\n")
+fhand.write("\nexport default gborns")
 fhand.close()
 
-print("Done, porfavorcito :C")
+print("gborns.js generated.")
