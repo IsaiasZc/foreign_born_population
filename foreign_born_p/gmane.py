@@ -6,6 +6,7 @@ from urllib.parse import urljoin
 from urllib.parse import urlparse
 import re
 from datetime import datetime, timedelta
+import gzip
 
 try:
     import dateutil.parser as parser
@@ -25,68 +26,104 @@ baseurl = "https://zircon.datausa.io/api/data?measure=Foreign-Born%20Citizens,Po
 
 cur.execute(
     """CREATE TABLE IF NOT EXISTS borns
-          (id INTEGER UNIQUE, id_place TEXT, place TEXT,
+          (id INTEGER PRIMARY KEY, id_place TEXT, place TEXT,
           id_year INTEGER, year TEXT, citiziens INTEGER,
           slug_place TEXT, population INTEGER)"""
 )
 
 start = None
-cur.execute('SELECT max(id) FROM borns')
+cur.execute("SELECT max(id) FROM borns")
 try:
     row = cur.fetchone()
-    if row is None :
+    if row is None:
         start = 0
     else:
         start = row[0]
 except:
     start = 0
 
-if start is None : start = 0
+if start is None:
+    start = 0
 
 many = 0
 count = 0
 fail = 0
 
 while True:
-    if (many < 1) :
+    if many < 1:
         conn.commit()
-        sval = input('How many reports: ')
-        if (len(sval) < 1) : break
+        sval = input("How many reports: ")
+        if len(sval) < 1:
+            break
         many = int(sval)
 
-    start = start + 1
-    cur.execute('SELECT id FROM borns WHERE id=?', (start,))
+    cur.execute("SELECT id FROM borns WHERE id=?", (start,))
+    
+    
     try:
         row = cur.fetchone()
-        if row is not None : continue
+        if row is not None:
+            continue
     except:
         row = None
-    
-    many = many - 1 + start # the number of registers from the user + the current registers
-    url = baseurl + '&limit=' + str(many)
 
-    text =  None
+    url = baseurl + "&limit=" + str(many + start)
+
+    text = None
     try:
         # Open with a timeout of 30 seconds
-        response = urllib.request.urlopen(url, None, 30, context=ctx)
-        json = response.read().decode()
+        response = urllib.request.urlopen(url, None, 10, context=ctx)
+        json = response.read()
 
-        if response.getcode() != 200 :
+        try:
+            json = gzip.decompress(json).decode("utf-8")
+        except:
+            json = json.decode("utf-8")
+
+        if response.getcode() != 200:
             print("Error code=", response.getcode(), url)
             break
     except KeyboardInterrupt:
-        print('')
-        print('Program interrupted by user...')
+        print("")
+        print("Program interrupted by user...")
         break
     except Exception as e:
-        print("Unable to retrieve or parse page",url)
-        print("Error",e)
+        print("Unable to retrieve or parse page", url)
+        print("Error", e)
         fail = fail + 1
-        if fail > 5 : break
+        if fail > 5:
+            break
         continue
 
-    print(url)
-    print("json:")
-    print(json)
+    json = eval(json)
     count += 1
-    break
+    print(url, len(json))
+
+    # ! [FIX] we are doing more iterations than necessary
+
+    for idx, born in enumerate(json["data"]):
+        if idx < start : continue
+        cur.execute(
+            """INSERT OR IGNORE INTO borns (id_place, place, id_year, year,
+                     citiziens, slug_place, population) VALUES (? , ?, ?, ?, ?, ?, ?)""",
+            (
+                born["ID Place"],
+                born["Place"],
+                born["ID Year"],
+                born["Year"],
+                born["Foreign-Born Citizens"],
+                born["Slug Place"],
+                born["Population"],
+            ),
+        )
+
+        # acomulate some date before insert them into the DB
+        if count % 50 == 0 : conn.commit()
+        if count % 100 == 0 : time.sleep(1)
+    
+    start = start + many
+    many = 0
+        
+
+conn.commit()
+cur.close()
