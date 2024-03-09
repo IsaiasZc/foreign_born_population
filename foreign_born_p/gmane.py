@@ -1,17 +1,10 @@
 import sqlite3
 import time
 import ssl
-import urllib.request, urllib.parse, urllib.error
-from urllib.parse import urljoin
-from urllib.parse import urlparse
-import re
+import requests
 from datetime import datetime, timedelta
 import gzip
 
-try:
-    import dateutil.parser as parser
-except:
-    pass
 
 ctx = ssl.create_default_context()
 ctx.check_hostname = False
@@ -57,32 +50,15 @@ while True:
             break
         many = int(sval)
 
-    cur.execute("SELECT id FROM borns WHERE id=?", (start,))
-    
-    
-    try:
-        row = cur.fetchone()
-        if row is not None:
-            continue
-    except:
-        row = None
-
     url = baseurl + "&limit=" + str(many + start)
 
     text = None
     try:
         # Open with a timeout of 30 seconds
-        response = urllib.request.urlopen(url, None, 10, context=ctx)
-        json = response.read()
+        print("Loading...")
+        response = requests.get(url)
+        json = response.json()
 
-        try:
-            json = gzip.decompress(json).decode("utf-8")
-        except:
-            json = json.decode("utf-8")
-
-        if response.getcode() != 200:
-            print("Error code=", response.getcode(), url)
-            break
     except KeyboardInterrupt:
         print("")
         print("Program interrupted by user...")
@@ -95,7 +71,7 @@ while True:
             break
         continue
 
-    json = eval(json)
+    # json = eval(json)
     count += 1
     print(url, len(json))
 
@@ -107,13 +83,13 @@ while True:
             """INSERT OR IGNORE INTO borns (id_place, place, id_year, year,
                      citiziens, slug_place, population) VALUES (? , ?, ?, ?, ?, ?, ?)""",
             (
-                born["ID Place"],
-                born["Place"],
-                born["ID Year"],
-                born["Year"],
-                born["Foreign-Born Citizens"],
-                born["Slug Place"],
-                born["Population"],
+                born.get('ID Place'),
+                born.get('Place'),
+                born.get('ID Year'),
+                born.get('Year'),
+                born.get('Foreign-Born Citizens'),
+                born.get('Slug Place'),
+                born.get('Population'),
             ),
         )
 
