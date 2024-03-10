@@ -4,12 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
     <main>
-        <canvas id="chart"></canvas>
+        <h1 class="font-bold text-4xl text-center mt-10 mb-10">Foreign Born Population in the United States</h1>
+        <div class="flex gap-10 justify-center mb-3 flex-wrap">
+            <div class="w-[750px] h-[500px] border-2 p-4 rounded-2xl border-black">
+                <p class="mb-4">
+                    The map below shows the foreign born population in the United States. The darker the color, the higher the population of foreign born people in that state. Hover over the state to see the exact number of foreign born people in that state.
+                </p>
+                <canvas id="chart" class="w-[750px] h-[500px]"></canvas>
+            </div>
+            <div>
+                <h3>Select a year: </h3>
+                <div id="button-container" class="flex gap-3 flex-wrap"></div>
+            </div>
+        </div>
     </main>
+    <footer>
+        <p class="text-center">Data Source: <a href="https://datausa.io/search">DATAUSA</a></p>
+    </footer>
     <script src="https://unpkg.com/chart.js@4.4.2/dist/chart.umd.js"></script>
     <script src="https://unpkg.com/chartjs-chart-geo@4.2.8/build/index.umd.min.js"></script>
+    <script type="module" src="born.js"></script>
 </body>
 </html>
