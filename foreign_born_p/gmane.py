@@ -36,20 +36,31 @@ fail = 0
 while True:
     if many < 1:
         conn.commit()
-        if len(years) > 0 :
-            print("years saved: ",years)
+        if len(years) > 0:
+            print("years saved: ", years)
         sval = input("Choose the Year of the report (From 2013 to 2021): ")
         if len(sval) < 1:
             break
+
+        ask = False
+
         while True:
-            if int(sval) < 2013 or int(sval) > 2021:
+            if ask:
+                sval = input("Choose the Year of the report (From 2013 to 2021): ")
+            ask = True
+            try:
+                sval = int(sval)
+            except:
+                print("\nPlease, write a number.\n")
+                continue
+            if sval < 2013 or sval > 2021:
                 print("The year is out of range.")
-            elif int(sval) in years:
-                print('We already have the data from that year.')
+            elif sval in years:
+                print("We already have the data from that year.")
             else:
                 break
-            sval = input("Choose the Year of the report (From 2013 to 2021): ")
-        many = int(sval)
+            # sval = input("Choose the Year of the report (From 2013 to 2021): ")
+        many = sval
 
     url = baseurl + "&year=" + str(many)
 
@@ -59,7 +70,7 @@ while True:
         print("Loading...")
         response = requests.get(url)
         json = response.json()
-        years.append(sval)
+        years.append(many)
 
     except KeyboardInterrupt:
         print("")
@@ -84,21 +95,23 @@ while True:
             """INSERT OR IGNORE INTO borns (id_state, state, id_year, year,
                 slug_state, population) VALUES (? , ?, ?, ?, ?, ?)""",
             (
-                born.get('ID State'),
-                born.get('State'),
-                born.get('ID Year'),
-                born.get('Year'),
-                born.get('Slug State'),
-                born.get('Population'),
+                born.get("ID State"),
+                born.get("State"),
+                born.get("ID Year"),
+                born.get("Year"),
+                born.get("Slug State"),
+                born.get("Population"),
             ),
         )
 
         # acomulate some date before insert them into the DB
-        if count % 50 == 0 : conn.commit()
-        if count % 100 == 0 : time.sleep(1)
-    
+        if count % 50 == 0:
+            conn.commit()
+        if count % 100 == 0:
+            time.sleep(1)
+
     many = 0
-        
+
 
 conn.commit()
 cur.close()
